@@ -13,10 +13,10 @@ module top (
     output reg finish
 );
 
-    // 內部信號
-    wire rst = ~rst_n;  // 轉換成正邏輯重置
     
-    // ALU 實例化
+    wire rst = ~rst_n;  
+    
+    
     wire [7:0] alu_result;
     ALU alu_inst (
         .A(data_A),
@@ -25,7 +25,7 @@ module top (
         .F(alu_result)
     );
 
-    // FSM 狀態定義
+    
     localparam IDLE = 2'b00;
     localparam COLLECT = 2'b01;
     localparam PROCESS = 2'b10;
@@ -33,14 +33,14 @@ module top (
 
     reg [1:0] state, next_state;
     
-    // 儲存前三大數值的暫存器
+    
     reg [7:0] largest, second_largest, third_largest_reg;
     
-    // 計數器
+    
     reg [7:0] data_counter;
     reg [7:0] total_count;
 
-    // FSM 狀態轉換
+    
     always @(posedge clk or posedge rst) begin
         if (rst)
             state <= IDLE;
@@ -48,7 +48,7 @@ module top (
             state <= next_state;
     end
 
-    // FSM 下一狀態邏輯
+    
     always @(*) begin
         case (state)
             IDLE: begin
@@ -76,7 +76,7 @@ module top (
         endcase
     end
 
-    // 數據處理邏輯
+    
     always @(posedge clk or posedge rst) begin
         if (rst) begin
             largest <= 0;
@@ -104,7 +104,7 @@ module top (
                     if (valid && data_counter < total_count) begin
                         data_counter <= data_counter + 1;
                         
-                        // 即時更新前三大數值
+                        
                         if (alu_result > largest) begin
                             third_largest_reg <= second_largest;
                             second_largest <= largest;
@@ -123,7 +123,7 @@ module top (
                 end
                 
                 PROCESS: begin
-                    // 處理完成，準備輸出
+                    
                     third_largest <= third_largest_reg;
                 end
                 
