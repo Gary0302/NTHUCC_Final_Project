@@ -1,4 +1,5 @@
 `timescale 1ns/1ps
+`define DELAY 10
 `define NUM_OF_PAT 400
 
 module tb;
