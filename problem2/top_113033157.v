@@ -1,20 +1,26 @@
+`timescale 1ns/1ps
+
 module top (
     input clk,
-    input rst,
-    input [7:0] A,
-    input [7:0] B,
+    input rst_n,
+    input start,
+    input valid,
+    input [7:0] data_A,
+    input [7:0] data_B,
     input [3:0] instruction,
-    input data_valid,
-    input last_data,
+    input [7:0] count,
     output reg [7:0] third_largest,
-    output reg result_valid
+    output reg finish
 );
 
+    // 內部信號
+    wire rst = ~rst_n;  // 轉換成正邏輯重置
+    
     // ALU 實例化
     wire [7:0] alu_result;
     ALU alu_inst (
-        .A(A),
-        .B(B),
+        .A(data_A),
+        .B(data_B),
         .instruction(instruction),
         .F(alu_result)
     );
@@ -29,11 +35,10 @@ module top (
     
     // 儲存前三大數值的暫存器
     reg [7:0] largest, second_largest, third_largest_reg;
-    reg [7:0] current_result;
     
     // 計數器
-    reg [7:0] data_count;
-    reg processing_done;
+    reg [7:0] data_counter;
+    reg [7:0] total_count;
 
     // FSM 狀態轉換
     always @(posedge clk or posedge rst) begin
@@ -47,13 +52,13 @@ module top (
     always @(*) begin
         case (state)
             IDLE: begin
-                if (data_valid)
+                if (start)
                     next_state = COLLECT;
                 else
                     next_state = IDLE;
             end
             COLLECT: begin
-                if (last_data && data_valid)
+                if (data_counter >= total_count)
                     next_state = PROCESS;
                 else
                     next_state = COLLECT;
@@ -62,7 +67,10 @@ module top (
                 next_state = DONE;
             end
             DONE: begin
-                next_state = IDLE;
+                if (!start)
+                    next_state = IDLE;
+                else
+                    next_state = DONE;
             end
             default: next_state = IDLE;
         endcase
@@ -74,26 +82,27 @@ module top (
             largest <= 0;
             second_largest <= 0;
             third_largest_reg <= 0;
-            data_count <= 0;
-            result_valid <= 0;
+            data_counter <= 0;
+            total_count <= 0;
+            finish <= 0;
             third_largest <= 0;
         end
         else begin
             case (state)
                 IDLE: begin
-                    result_valid <= 0;
-                    if (data_valid) begin
+                    finish <= 0;
+                    if (start) begin
                         largest <= 0;
                         second_largest <= 0;
                         third_largest_reg <= 0;
-                        data_count <= 0;
+                        data_counter <= 0;
+                        total_count <= count;
                     end
                 end
                 
                 COLLECT: begin
-                    if (data_valid) begin
-                        current_result <= alu_result;
-                        data_count <= data_count + 1;
+                    if (valid && data_counter < total_count) begin
+                        data_counter <= data_counter + 1;
                         
                         // 即時更新前三大數值
                         if (alu_result > largest) begin
@@ -119,7 +128,7 @@ module top (
                 end
                 
                 DONE: begin
-                    result_valid <= 1;
+                    finish <= 1;
                 end
             endcase
         end
